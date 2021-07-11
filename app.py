@@ -18,6 +18,8 @@ def prediction():
     print(data)
     data1 = request['input_image']
     print(data1)
+    echo "ad"
+    return "gotit"
 
 if __name__ == '__main__':
     app.run(port = 5000, debug=True)
