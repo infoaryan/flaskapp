@@ -10,10 +10,14 @@ app = Flask(__name__)
 def predict():
     return render_template("index.html")
 
-@app.route('/prediction',methods=["POST"])
+@app.route('/prediction',methods=["GET","POST"])
 def prediction():
-    data = request.get_json()
-    return data
+    print("Got into method")
+    print(request)
+    data = request['output_size']
+    print(data)
+    data1 = request['input_image']
+    print(data1)
 
 if __name__ == '__main__':
     app.run(port = 5000, debug=True)
