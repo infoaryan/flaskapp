@@ -12,8 +12,8 @@ def predict():
 
 @app.route('/prediction',methods=["POST"])
 def prediction():
-    img = request.files['img']
-    return model.summary()
+    data = request.get_json()
+    return data
 
 if __name__ == '__main__':
     app.run(port = 5000, debug=True)
