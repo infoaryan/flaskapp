@@ -1,7 +1,7 @@
 from flask import Flask, jsonify, request, render_template
 import numpy as np
 import base64
-import tflite
+import tensorflow as tf
 
 # app
 app = Flask(__name__)
@@ -19,7 +19,7 @@ def prediction():
     print(q.shape)
     q = np.reshape(q, (1,512, 512,1))
     q = q.astype('float32')
-    interpreter = tflite.Interpreter("converted_model.tflite")
+    interpreter = tf.lite.Interpreter(model_path="converted_model.tflite")
     interpreter.allocate_tensors()
     input_details = interpreter.get_input_details()
     output_details = interpreter.get_output_details()
