@@ -2,6 +2,7 @@ from flask import Flask, jsonify, request, render_template
 import numpy as np
 import base64
 import tflite
+import json
 
 # app
 app = Flask(__name__)
@@ -15,10 +16,11 @@ def predict():
 def prediction():
     data = request.json['input_image']
     r = base64.b64decode(data)
-    q = np.frombuffer(r, dtype=np.float64)
+    q = np.frombuffer(r, dtype=np.uint8)
     print(q.shape)
     q = np.reshape(q, (512, 512))
     print(q.shape)
+    q = q.astype('float32')
     interpreter = tflite.Interpreter("converted_model.tflite")
     print("Interpreter Initialized !!")
     interpreter.allocate_tensors()
@@ -28,7 +30,7 @@ def prediction():
     print("Interpreter Invoked")
     output_data = interpreter.get_tensor(output_details[0]['index'])
     print(output_data)
-    return "ad"
+    return json.dumps(output_data)
 
 if __name__ == '__main__':
     app.run(port = 5000, debug=True, threaded='True')
