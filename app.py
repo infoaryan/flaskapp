@@ -2,7 +2,6 @@ from flask import Flask, jsonify, request, render_template
 import numpy as np
 import base64
 import tflite
-import json
 
 # app
 app = Flask(__name__)
@@ -31,4 +30,4 @@ def prediction():
     return jsonify(data="{}".format(output_data[0][0]))
 
 if __name__ == '__main__':
-    app.run(port = 5000, debug=True, threaded='True')
+    app.run(debug=True, threaded='True')
