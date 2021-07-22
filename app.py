@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request, render_template
+from flask import Flask, request, render_template
 import numpy as np
 import base64
 import tensorflow as tf
@@ -25,19 +25,24 @@ def prediction():
     q = np.reshape(q, (1,512, 512,1))
     print(q.shape)
     q = q.astype('float32')
-    net = tf.keras.models.load_model('model.hdf5')
-    print("Model Loaded !!")
-    conv_layer = net.get_layer("block7a_project_conv")
-    heatmap_model = tf.keras.models.Model([net.inputs], [conv_layer.output, net.output])
+    heatmap_model = tf.keras.models.load_model('model.hdf5')
+    #print("Model Loaded !!")
+    #conv_layer = net.get_layer("block7a_project_conv")
+    #heatmap_model = tf.keras.models.Model([net.inputs], [conv_layer.output, net.output])
     # Get gradient of the winner class w.r.t. the output of the (last) conv. layer
     print("Heatmodel generated !!!")
     with tf.GradientTape() as gtape:
         conv_output, predictions = heatmap_model(q)
+        del q
+        del heatmap_model
         loss = predictions[:, np.argmax(predictions[0])]
         grads = gtape.gradient(loss, conv_output)
         pooled_grads = K.mean(grads, axis=(0, 1, 2))
     print(predictions)
     predicted_class = np.argmax(predictions[0])
+    if(predicted_class==1):
+        payload = {"predicted_class" : "{}".format(predicted_class),"saliency_map" : ""}
+        return json.dumps(payload)
     heatmap = tf.reduce_mean(tf.multiply(pooled_grads, conv_output), axis=-1)
     heatmap = np.maximum(heatmap, 0)
     max_heat = np.max(heatmap)
@@ -60,7 +65,6 @@ def prediction():
     print(jet_heatmap.shape)
 
     bdata = base64.b64encode(jet_heatmap).decode()
-    #return jsonify(data="{}".format(bdata))
     payload = {"predicted_class" : "{}".format(predicted_class),"saliency_map" : bdata}
     return json.dumps(payload)
 
