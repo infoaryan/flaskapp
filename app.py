@@ -1,8 +1,9 @@
 from flask import Flask, request, render_template
-import numpy as np
-import base64
-import tensorflow as tf
-import tensorflow.keras.backend as K
+from numpy import frombuffer,reshape, argmax, maximum,max, uint8, arange
+from base64 import b64decode, b64encode
+from tensorflow.keras.models import load_model
+from tensorflow.keras.backend import mean
+from tensorflow import GradientTape, reduce_mean, multiply
 import matplotlib.cm as cm
 import json
 
@@ -19,43 +20,43 @@ def predict():
 def prediction():
     print(request)
     data = request.json['input_image']
-    r = base64.b64decode(data)
-    q = np.frombuffer(r, dtype=np.uint8)
+    r = b64decode(data)
+    q = frombuffer(r, dtype=uint8)
     print(q.shape)
-    q = np.reshape(q, (1,512, 512,1))
+    q = reshape(q, (1,512, 512,1))
     print(q.shape)
     q = q.astype('float32')
-    heatmap_model = tf.keras.models.load_model('model.hdf5',compile = False)
+    heatmap_model = load_model('model.hdf5',compile = False)
     #print("Model Loaded !!")
     #conv_layer = net.get_layer("block7a_project_conv")
     #heatmap_model = tf.keras.models.Model([net.inputs], [conv_layer.output, net.output])
     # Get gradient of the winner class w.r.t. the output of the (last) conv. layer
     print("Heatmodel generated !!!")
-    with tf.GradientTape() as gtape:
+    with GradientTape() as gtape:
         conv_output, predictions = heatmap_model(q)
-        del q
-        del heatmap_model
-        loss = predictions[:, np.argmax(predictions[0])]
+        loss = predictions[:, argmax(predictions[0])]
         grads = gtape.gradient(loss, conv_output)
-        pooled_grads = K.mean(grads, axis=(0, 1, 2))
-    predicted_class = np.argmax(predictions[0])
+        pooled_grads = mean(grads, axis=(0, 1, 2))
+    predicted_class = argmax(predictions[0])
+    del q
+    del heatmap_model
     if(predicted_class==1):
         payload = {"predicted_class" : "{}".format(predicted_class),"saliency_map" : ""}
         return json.dumps(payload)
-    heatmap = tf.reduce_mean(tf.multiply(pooled_grads, conv_output), axis=-1)
-    heatmap = np.maximum(heatmap, 0)
-    max_heat = np.max(heatmap)
+    heatmap = reduce_mean(multiply(pooled_grads, conv_output), axis=-1)
+    heatmap = maximum(heatmap, 0)
+    max_heat = max(heatmap)
     if max_heat == 0:
         max_heat = 1e-10
     heatmap /= max_heat
     print(heatmap.shape)
     #Now the generated heatmap has to move through colourizing procedure
     # Rescale heatmap to a range 0-255
-    heatmap = np.uint8(255 * heatmap[0])
+    heatmap = uint8(255 * heatmap[0])
     # Use jet colormap to colorize heatmap
     jet = cm.get_cmap("jet")
     # Use RGB values of the colormap
-    jet_colors = jet(np.arange(256))[:, :3]
+    jet_colors = jet(arange(256))[:, :3]
     jet_heatmap = jet_colors[heatmap]
     #interpreter.set_tensor(input_details[0]['index'], q)
     #interpreter.invoke()
@@ -63,7 +64,7 @@ def prediction():
     #output_data = interpreter.get_tensor(output_details[0]['index'])
     print(jet_heatmap.shape)
 
-    bdata = base64.b64encode(jet_heatmap).decode()
+    bdata = b64encode(jet_heatmap).decode()
     payload = {"predicted_class" : "{}".format(predicted_class),"saliency_map" : bdata}
     return json.dumps(payload)
 
