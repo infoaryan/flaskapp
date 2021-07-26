@@ -25,7 +25,7 @@ def prediction():
     q = np.reshape(q, (1,512, 512,1))
     print(q.shape)
     q = q.astype('float32')
-    heatmap_model = tf.keras.models.load_model('model.hdf5')
+    heatmap_model = tf.keras.models.load_model('model.hdf5',compile = False)
     #print("Model Loaded !!")
     #conv_layer = net.get_layer("block7a_project_conv")
     #heatmap_model = tf.keras.models.Model([net.inputs], [conv_layer.output, net.output])
@@ -38,7 +38,6 @@ def prediction():
         loss = predictions[:, np.argmax(predictions[0])]
         grads = gtape.gradient(loss, conv_output)
         pooled_grads = K.mean(grads, axis=(0, 1, 2))
-    print(predictions)
     predicted_class = np.argmax(predictions[0])
     if(predicted_class==1):
         payload = {"predicted_class" : "{}".format(predicted_class),"saliency_map" : ""}
