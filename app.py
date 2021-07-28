@@ -2,7 +2,7 @@ from flask import Flask, request, render_template
 from numpy import frombuffer,reshape, argmax, maximum,max, uint8, arange
 from base64 import b64decode, b64encode
 from tensorflow.keras.models import load_model
-from tensorflow.keras.backend import mean
+import tensorflow.keras.backend as K
 from tensorflow import GradientTape, reduce_mean, multiply
 import matplotlib.cm as cm
 import json
@@ -10,6 +10,7 @@ import json
 
 # app
 app = Flask(__name__)
+heatmap_model = load_model('model.hdf5',compile = False)
 
 # routes
 @app.route('/')
@@ -22,24 +23,17 @@ def prediction():
     data = request.json['input_image']
     r = b64decode(data)
     q = frombuffer(r, dtype=uint8)
-    print(q.shape)
     q = reshape(q, (1,512, 512,1))
-    print(q.shape)
     q = q.astype('float32')
-    heatmap_model = load_model('model.hdf5',compile = False)
-    #print("Model Loaded !!")
     #conv_layer = net.get_layer("block7a_project_conv")
-    #heatmap_model = tf.keras.models.Model([net.inputs], [conv_layer.output, net.output])
     # Get gradient of the winner class w.r.t. the output of the (last) conv. layer
-    print("Heatmodel generated !!!")
     with GradientTape() as gtape:
         conv_output, predictions = heatmap_model(q)
         loss = predictions[:, argmax(predictions[0])]
         grads = gtape.gradient(loss, conv_output)
-        pooled_grads = mean(grads, axis=(0, 1, 2))
+        pooled_grads = K.mean(grads, axis=(0, 1, 2))
     predicted_class = argmax(predictions[0])
-    del q
-    del heatmap_model
+    K.clear_session()
     if(predicted_class==1):
         payload = {"predicted_class" : "{}".format(predicted_class),"saliency_map" : ""}
         return json.dumps(payload)
